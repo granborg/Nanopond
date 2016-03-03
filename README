@@ -1,0 +1,16 @@
+README
+
+Compiling SDL-1.2.15 
+	OSX:
+	1) Go to your build directory (ideally ~/local/build/SDL-1.2.15).
+	2) Run configure as follow (adjust directories to suit)
+			~/local/src/nanopond2/SDL-1.2.15/configure --prefix=${HOME}/local/install/SDL-1.2.15
+	3) make
+	4) make install
+
+Compiling nanopond
+
+Running nanopond
+	0) Assuming bash:
+		export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/install/lib
+	
