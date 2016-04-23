@@ -239,7 +239,7 @@
 /* Define this to use SDL. To use SDL, you must have SDL headers
  * available and you must link with the SDL library when you compile. */
 /* Comment this out to compile without SDL visualization support. */
-#define USE_SDL 1
+//#define USE_SDL 1
 
 /* Define this to use a fixed random number seed.  Comment out to use
  * a time-based seed. */
@@ -260,7 +260,7 @@
 #else
 #include "SDL.h"
 #endif /* _MSC_VER */
-#endif /* USE_SDL */
+#endif USE_SDL
 
 /* ----------------------------------------------------------------------- */
 /* This is the Mersenne Twister by Makoto Matsumoto and Takuji Nishimura   */
@@ -466,30 +466,27 @@ struct Pond
 };
 
 uint64_t sentinel[(POND_SIZE_X*POND_SIZE_Y / 64) + 1];
+uint64_t xs, ys;
 
 uint8_t enterPond(uint64_t x, uint64_t y) {
-	/*uint64_t cellNum = (x * POND_SIZE_X) + y;
-	if ((sentinel[cellNum/64] & (uint64_t)1 << cellNum % 64) == 0) {
-	sentinel[cellNum/64] |= ((uint64_t)1 << cellNum % 64);
-	//printf("entering x: %u, y: %u\n", x, y);
-	return 1;
-	}
+	//uint64_t cellNum = (x * POND_SIZE_X) + y;
+	//if (!(sentinel[cellNum / 64] & (1 << cellNum % 64))) {
+	//	sentinel[cellNum / 64] |= (1 << cellNum % 64);
+	//	//printf("entering x: %u, y: %u\n", x, y);
+	//	return 1;
+	//}
 	//printf("failed x: %u, y: %u\n", x, y);
-	return 0;*/
 	return 1;
 }
 
 void leavePond(uint64_t x, uint64_t y) {
-	/*
-	int64_t cellNum = (x * POND_SIZE_X) + y;
-	//printf("leaving x: %u, y: %u\n", x, y);
-	sentinel[cellNum/64] &= ~((uint64_t)1 << cellNum % 64);
-	*/
+	//uint64_t cellNum = (x * POND_SIZE_X) + y;
+	////printf("leaving x: %u, y: %u\n", x, y);
+	//sentinel[cellNum / 64] &= ~(1 << cellNum % 64);
 }
 
 /* The pond is a 2D array of cells */
 struct Pond pond;
-uint64_t tmcell[2];
 
 /* Currently selected color scheme */
 enum color { KINSHIP, LINEAGE, MAX_COLOR_SCHEME } colorScheme = KINSHIP;
@@ -733,11 +730,11 @@ static __inline void getNeighbor(uint64_t x, uint64_t y, const uint64_t dir)
 		if (y < (POND_SIZE_Y - 1)) y = y + 1; else y = 0;
 	}
 	// Wait for the cell to be freed.
-	while (enterPond(x, y) == 0) {
+	while (!enterPond(x, y)) {
 		printf("waiting inside getNeighbor for x: %u y: %u\n", x, y);
 	}
-	tmcell[0] = x;
-	tmcell[1] = y;
+	xs = x;
+	ys = y;
 }
 
 /**
@@ -929,8 +926,7 @@ int main(int argc, char **argv)
 	/* It is incremented to track the depth of a nested set
 	 * of LOOP/REP pairs in false state. */
 	uint64_t falseLoopDepth;
-
-	uint64_t xs, ys;
+	
 	/* If this is nonzero, cell execution stops. This allows us
 	 * to avoid the ugly use of a goto to exit the loop. :) */
 	int stop;
@@ -1007,7 +1003,7 @@ int main(int argc, char **argv)
 			do {
 				x = getRandom() % POND_SIZE_X;
 				y = getRandom() % POND_SIZE_Y;
-			} while (enterPond(x, y) == 0);
+			} while (!enterPond(x, y));
 			pond.ID[x][y] = cellIdCounter;
 			pond.parentID[x][y] = 0;
 			pond.lineage[x][y] = cellIdCounter;
@@ -1205,8 +1201,6 @@ int main(int argc, char **argv)
 					break;
 				case 0xd: /* KILL: Blow away neighboring cell if allowed with penalty on failure */
 					getNeighbor(x, y, facing);
-					xs = tmcell[0];
-					ys = tmcell[1];
 					//printf("xt: %u, yt: %u\ allowed: %u\n", xt, yt, accessAllowed(xt,yt,reg,0));
 					if (accessAllowed(xs, ys, reg, 0)) {
 						if (pond.generation[xs][ys] > 2){
@@ -1235,8 +1229,6 @@ int main(int argc, char **argv)
 					break;
 				case 0xe: /* SHARE: Equalize energy between self and neighbor if allowed */
 					getNeighbor(x, y, facing);
-					xs = tmcell[0];
-					ys = tmcell[1];
 					//printf("xs: %u, ys: %u\ allowed: %u\n", xs, ys, accessAllowed(xs,ys,reg,0));
 					if (accessAllowed(xs, ys, reg, 1)) {
 						if (pond.generation[xs][ys] > 2) {
@@ -1253,6 +1245,7 @@ int main(int argc, char **argv)
 					stop = 1;
 					break;
 				}
+				
 			}
 
 			/* Advance the shift and word pointers, and loop around
@@ -1275,8 +1268,6 @@ int main(int argc, char **argv)
 		 * junk eventually. See the seeding code in the main loop above. */
 		if ((outputBuf[0] & 0xff) != 0xff) {
 			getNeighbor(x, y, facing);
-			xs = tmcell[0];
-			ys = tmcell[1];
 			//printf("xg: %u, yg: %u allowed: %u\n", xg, yg, accessAllowed(xg,yg,reg,0));
 
 			if ((pond.energy[xs][ys]) && accessAllowed(xs, ys, reg, 0)) {
@@ -1339,10 +1330,12 @@ int main(int argc, char **argv)
 #endif /* DUMP_FREQUENCY */
 	fprintf(stderr, "[QUIT] STOP_AT clock value reached\n");
 	END_TIME;
+#ifdef USE_SDL
 	SDL_DestroyTexture(sdlTexture);
 	SDL_DestroyRenderer(sdlRenderer);
 	SDL_DestroyWindow(sdlWindow);
 	SDL_Quit();
+#endif USE_SDL
 	printf("\n\nElapsed time: %g\n\n", DELTA_TIME);
 	exit(0);
 	return 0; /* Make compiler shut up */
