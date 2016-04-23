@@ -1,13 +1,22 @@
-npx: nanopond2.c
-	gcc --verbose 									\
-		-g -Wall									\
-		-O3 -msse2 nanopond2.c -o npx					\
+npo: nanopond.c
+	gcc --verbose 					\
+		-g -Wall				\
+		-O3 -msse2 nanopond.c -o npo		\
 		-lSDL -fopenmp
 
-clean:
-	rm -f ./npx
+npsoa: nanopondSOA.c
+	gcc --verbose					\
+		-g -Wall				\
+		-O3 -msse2 nanopondSOA.c -o npsoa	\
+		-lSDL2 -fopenmp
 
-test:  npx
-	/usr/bin/time ./npx
-		
+
+clean:
+	rm -f ./npo ./npn
+
+testold:  npx
+	/usr/bin/time ./npo
+
+testnew: npn
+	/usr/bin/time ./npn
 

@@ -178,16 +178,19 @@
 /* Tunable parameters                                                      */
 /* ----------------------------------------------------------------------- */
 
-#define START_TIME gettimeofday(&t0, NULL);
-#define END_TIME gettimeofday(&t1, NULL);
+#define START_TIME getTime(&t0, NULL);
+#define END_TIME getTime(&t1, NULL);
 #define DELTA_TIME t1.tv_sec - t0.tv_sec + (t1.tv_usec-t0.tv_usec)/1000000.0
 
 /* Tick length.  Simpler to think about frequencies in terms of ticks
  * rather than numbers with lots of trailing zeros.*/
 #define TICK 10000ULL
 
+/* Uncomment if running Nanopond using Visual Studio */
+//#define USING_VISUAL_STUDIO 1
+
 /* Iteration to stop at. Comment this out to run forever. */
-#define STOP_AT (1000 * TICK)
+#define STOP_AT (10000 * TICK)
 
 /* Frequency of comprehensive reports-- lower values will provide more
  * info while slowing down the simulation. Higher values will give less
@@ -239,7 +242,7 @@
 /* Define this to use SDL. To use SDL, you must have SDL headers
  * available and you must link with the SDL library when you compile. */
 /* Comment this out to compile without SDL visualization support. */
-//#define USE_SDL 1
+#define USE_SDL 1
 
 /* Define this to use a fixed random number seed.  Comment out to use
  * a time-based seed. */
@@ -253,14 +256,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef USING_VISUAL_STUDIO
 #include <Winsock2.h>
+#else
+#include <sys/time.h>
+#endif /* USING_VISUAL_STUDIO */
 #ifdef USE_SDL
 #ifdef _MSC_VER
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #else
-#include "SDL.h"
+#include "SDL2/SDL.h"
 #endif /* _MSC_VER */
-#endif USE_SDL
+#endif /* USE_SDL */
 
 /* ----------------------------------------------------------------------- */
 /* This is the Mersenne Twister by Makoto Matsumoto and Takuji Nishimura   */
@@ -395,8 +402,9 @@ static __inline uint64_t getRandom()
 	}
 }
 
-int gettimeofday(struct timeval * tp, struct timezone * tzp)
+int getTime(struct timeval * tp, struct timezone * tzp)
 {
+  #ifdef USING_VISUAL_STUDIO
 	// Note: some broken versions only have 8 trailing zero's, the correct epoch has 9 trailing zero's
 	static const uint64_t EPOCH = ((uint64_t)116444736000000000ULL);
 
@@ -412,6 +420,8 @@ int gettimeofday(struct timeval * tp, struct timezone * tzp)
 	tp->tv_sec = (long)((time - EPOCH) / 10000000L);
 	tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
 	return 0;
+   #endif
+	return gettimeofday(tp, tzp);
 }
 
 /* ----------------------------------------------------------------------- */
@@ -881,7 +891,7 @@ int main(int argc, char **argv)
 #endif /* USE_SDL */
 
 	/* Clear the pond and initialize all genomes to 0xffff... */
-# pragma omp parallel for num_threads(4)
+	//# pragma omp parallel for num_threads(4)
 	for (x = 0; x < POND_SIZE_X; ++x) {
 		for (y = 0; y < POND_SIZE_Y; ++y) {
 			pond.ID[x][y] = 0;
@@ -1335,7 +1345,7 @@ int main(int argc, char **argv)
 	SDL_DestroyRenderer(sdlRenderer);
 	SDL_DestroyWindow(sdlWindow);
 	SDL_Quit();
-#endif USE_SDL
+#endif /* USE_SDL */
 	printf("\n\nElapsed time: %g\n\n", DELTA_TIME);
 	exit(0);
 	return 0; /* Make compiler shut up */
